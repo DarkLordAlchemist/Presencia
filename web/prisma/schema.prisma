@@ -16,6 +16,7 @@ enum Role {
   MANAGER
   EMPLOYEE
   KIOSK
+  SECURITY
 }
 
 enum PunchType {
@@ -133,6 +134,7 @@ model User {
   certificateReviews  CertificateRequest[] @relation("CertificateReviewer")
   payslips            Payslip[]            @relation("PayslipOwner")
   issuedPayslips      Payslip[]            @relation("PayslipIssuer")
+  movementLogs        MovementLog[]        @relation("MovementLogSubject")
 }
 
 model Schedule {
@@ -352,6 +354,20 @@ model PayslipLineItem {
   sortOrder Int                  @default(0)
 
   createdAt DateTime @default(now())
+}
+
+// A passive "seen at this camera/location" sighting, logged automatically
+// by the Security dashboard on a recognized + live face — deliberately a
+// separate log from Punch, not a 5th PunchType: a hallway/door camera
+// glance is a location sighting, not an attendance event, and must never
+// advance the TIME_IN/BREAK_OUT/BREAK_IN/TIME_OUT cycle.
+model MovementLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("MovementLogSubject", fields: [userId], references: [id])
+  location   String // free-text label the security operator assigned to that camera tile
+  confidence Float
+  createdAt  DateTime @default(now())
 }
 
 // Singleton row: system-wide biometric + attendance-policy config, set by SUPER_ADMIN.

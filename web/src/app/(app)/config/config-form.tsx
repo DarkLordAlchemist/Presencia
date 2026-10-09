@@ -265,7 +265,7 @@ export function ConfigForm({ config }: { config: SystemConfig }) {
           name="payrollWebhookUrl"
           type="url"
           defaultValue={config.payrollWebhookUrl ?? ""}
-          placeholder="https://your-payroll-system.example/webhooks/presentia"
+          placeholder="https://your-payroll-system.example/webhooks/presencia"
           className={inputClass}
         />
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">

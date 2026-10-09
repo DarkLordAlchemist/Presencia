@@ -1,6 +1,20 @@
-# Presentia
+# Presencia
 
-Facial recognition time-in/time-out for HR attendance.
+**Frictionless Security at Face Value.**
+
+Started as facial recognition time-in/time-out for HR attendance — now a
+full facial-recognition security platform: HR attendance *and*
+multi-camera security monitoring that tracks who's moving where across
+multiple physical locations, live.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Sign in](docs/images/login.jpg) | ![Dashboard](docs/images/dashboard.jpg) |
+| Sign in | Role-aware dashboard |
+| ![Security — multi-camera monitoring](docs/images/security-dashboard.jpg) | ![Facial enrollment](docs/images/enroll.jpg) |
+| Security — live multi-camera movement log | Facial enrollment |
 
 Two services:
 
@@ -21,6 +35,9 @@ Two services:
   leave/overtime/correction/certificate requests.
 - **Kiosk/Device** — a locked-down account for a shared tablet at the
   entrance; no nav, no logout button, camera-only clock-in loop.
+- **Security** — runs the multi-camera monitoring dashboard: watches one
+  or more physical cameras at once and logs recognized, live faces by
+  location automatically, no interaction required.
 
 ## Features
 
@@ -28,6 +45,21 @@ Two services:
   (SFace embeddings) + liveness/anti-spoofing (MiniFASNet), with a
   verify-then-choose kiosk flow (identify a face, show status, let the
   employee pick Time In/Break Out/Break In/Time Out themselves).
+- **Multi-camera security monitoring** (`/security`) — the newest
+  capability, and the one that turns this from a single-kiosk time clock
+  into a real facial-recognition security platform. Add any number of
+  camera tiles, each bound to a specific physical camera
+  (`navigator.mediaDevices.enumerateDevices()` — pick the exact device,
+  not just whatever the browser defaults to) and a typed location label
+  ("Back Door", "Lobby", "2nd Floor"). Each tile scans continuously on
+  its own, runs the same liveness + recognition pipeline as the kiosk (so
+  a held-up photo can't fake a sighting), and automatically logs
+  **employee, location, and time** the moment it recognizes someone — no
+  tap, no confirmation, no kiosk-style interaction at all. A live table
+  on the same page shows recent movement across every camera at once. No
+  physical door/lock hardware integration yet (that's the planned phase 2
+  step) — today it's full visibility into who's where, the access-control
+  trigger comes next.
 - **Attendance rules** — grace periods, overtime, midnight-crossing-aware
   night differential, single-break and daily-total break budgets.
 - **Location/network controls** — GPS geofencing and IP/prefix locking,

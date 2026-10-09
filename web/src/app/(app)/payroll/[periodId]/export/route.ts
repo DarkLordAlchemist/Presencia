@@ -67,7 +67,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ periodI
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="presentia-payroll-${startLabel}_to_${endLabel}.csv"`,
+      "Content-Disposition": `attachment; filename="presencia-payroll-${startLabel}_to_${endLabel}.csv"`,
     },
   });
 }

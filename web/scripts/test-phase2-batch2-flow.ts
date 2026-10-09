@@ -27,11 +27,11 @@ const FACE_ENGINE_PYTHON = fileURLToPath(new URL("../../face-engine/.venv/Script
 const FAKE_VIDEO_PATH = fileURLToPath(new URL("../tmp_test/fake_camera.y4m", import.meta.url));
 
 const PASSWORD = "correcthorsebattery";
-const ADMIN = { name: "Test Admin 2", email: "admin2@test.presentia" };
-const HR = { name: "Test HR 2", email: "hr2@test.presentia" };
-const MANAGER = { name: "Test Manager 2", email: "manager2@test.presentia" };
-const EMPLOYEE = { name: "Test Employee 2", email: "employee2@test.presentia" };
-const KIOSK = { name: "Front Desk Kiosk 2", email: "kiosk2@test.presentia" };
+const ADMIN = { name: "Test Admin 2", email: "admin2@test.presencia" };
+const HR = { name: "Test HR 2", email: "hr2@test.presencia" };
+const MANAGER = { name: "Test Manager 2", email: "manager2@test.presencia" };
+const EMPLOYEE = { name: "Test Employee 2", email: "employee2@test.presencia" };
+const KIOSK = { name: "Front Desk Kiosk 2", email: "kiosk2@test.presencia" };
 
 // A real place in Metro Manila to use as the "correct" geofence center.
 const OFFICE = { lat: 14.5547, lng: 121.0244 };
@@ -41,7 +41,7 @@ const { report, summarize } = makeReporter();
 
 async function cleanupTestData() {
   const ids = (
-    await prisma.user.findMany({ where: { email: { endsWith: "@test.presentia" } }, select: { id: true } })
+    await prisma.user.findMany({ where: { email: { endsWith: "@test.presencia" } }, select: { id: true } })
   ).map((u) => u.id);
   if (ids.length > 0) {
     await prisma.auditLog.deleteMany({ where: { actorId: { in: ids } } });

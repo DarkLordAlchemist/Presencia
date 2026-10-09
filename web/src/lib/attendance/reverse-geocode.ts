@@ -14,7 +14,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
       `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
       {
         signal: controller.signal,
-        headers: { "User-Agent": "Presentia-HR-Attendance/1.0" },
+        headers: { "User-Agent": "Presencia-HR-Attendance/1.0" },
       },
     );
     clearTimeout(timeout);

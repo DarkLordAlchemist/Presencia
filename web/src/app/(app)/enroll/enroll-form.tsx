@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCamera } from "@/components/use-camera";
 import { enrollEmployeeFace } from "@/lib/actions/enrollment";
 
@@ -12,7 +12,28 @@ interface UserOption {
 }
 
 export function EnrollForm({ users }: { users: UserOption[] }) {
-  const { videoRef, ready, error: cameraError, captureFrame } = useCamera();
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState<string>("");
+
+  useEffect(() => {
+    async function loadDevices() {
+      // Labels are blank until a camera permission has been granted at
+      // least once — request (and immediately stop) a throwaway stream so
+      // the picker below shows real device names, not blank entries.
+      try {
+        const probe = await navigator.mediaDevices.getUserMedia({ video: true });
+        probe.getTracks().forEach((t) => t.stop());
+      } catch {
+        // fall through — enumerateDevices still returns device IDs even
+        // without labels, just less readable
+      }
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setDevices(list.filter((d) => d.kind === "videoinput"));
+    }
+    loadDevices();
+  }, []);
+
+  const { videoRef, ready, error: cameraError, captureFrame } = useCamera(deviceId || undefined);
   const [userId, setUserId] = useState(users[0]?.id ?? "");
   const [preview, setPreview] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
@@ -67,6 +88,27 @@ export function EnrollForm({ users }: { users: UserOption[] }) {
           ))}
         </select>
       </div>
+
+      {devices.length > 1 && (
+        <div>
+          <label htmlFor="deviceId" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Camera
+          </label>
+          <select
+            id="deviceId"
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value)}
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          >
+            <option value="">Default camera</option>
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || `Camera ${d.deviceId.slice(0, 6)}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="relative aspect-video w-full overflow-hidden rounded-md bg-zinc-900">
         {!preview && (

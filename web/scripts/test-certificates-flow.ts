@@ -12,19 +12,19 @@ const WEB_PORT = 3500;
 const BASE = `http://localhost:${WEB_PORT}`;
 
 const PASSWORD = "correcthorsebattery";
-const ADMIN = { name: "Cert Test Admin", email: "cert-admin@test.presentia" };
-const HR = { name: "Cert Test HR", email: "cert-hr@test.presentia" };
+const ADMIN = { name: "Cert Test Admin", email: "cert-admin@test.presencia" };
+const HR = { name: "Cert Test HR", email: "cert-hr@test.presencia" };
 // Deliberately not substrings of each other — Playwright's `hasText` row
 // filter does substring matching, and "Cert Test Employee" would match
 // both an "Employee One" and an "Employee Two" row.
-const EMPLOYEE = { name: "Cert Test Employee One", email: "cert-employee@test.presentia" };
-const EMPLOYEE2 = { name: "Cert Test Employee Two", email: "cert-employee2@test.presentia" };
+const EMPLOYEE = { name: "Cert Test Employee One", email: "cert-employee@test.presencia" };
+const EMPLOYEE2 = { name: "Cert Test Employee Two", email: "cert-employee2@test.presencia" };
 
 const { report, summarize } = makeReporter();
 
 async function cleanupTestData() {
   const ids = (
-    await prisma.user.findMany({ where: { email: { endsWith: "@test.presentia" } }, select: { id: true } })
+    await prisma.user.findMany({ where: { email: { endsWith: "@test.presencia" } }, select: { id: true } })
   ).map((u) => u.id);
   if (ids.length > 0) {
     await prisma.certificateRequest.deleteMany({ where: { userId: { in: ids } } });

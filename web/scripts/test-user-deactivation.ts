@@ -14,14 +14,14 @@ const WEB_PORT = 3400;
 const BASE = `http://localhost:${WEB_PORT}`;
 
 const PASSWORD = "correcthorsebattery";
-const ADMIN = { name: "Deact Test Admin", email: "deact-admin@test.presentia" };
-const EMPLOYEE = { name: "Deact Test Employee", email: "deact-employee@test.presentia" };
+const ADMIN = { name: "Deact Test Admin", email: "deact-admin@test.presencia" };
+const EMPLOYEE = { name: "Deact Test Employee", email: "deact-employee@test.presencia" };
 
 const { report, summarize } = makeReporter();
 
 async function cleanupTestData() {
   const ids = (
-    await prisma.user.findMany({ where: { email: { endsWith: "@test.presentia" } }, select: { id: true } })
+    await prisma.user.findMany({ where: { email: { endsWith: "@test.presencia" } }, select: { id: true } })
   ).map((u) => u.id);
   if (ids.length > 0) {
     await prisma.punch.deleteMany({ where: { userId: { in: ids } } });

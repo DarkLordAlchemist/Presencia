@@ -59,6 +59,7 @@ export function NewUserForm({ managers }: { managers: { id: string; name: string
           <option value="MANAGER">Department Manager</option>
           <option value="EMPLOYEE">Regular Employee</option>
           <option value="KIOSK">Kiosk / Device</option>
+          <option value="SECURITY">Security</option>
         </select>
       </div>
 

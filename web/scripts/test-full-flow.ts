@@ -24,17 +24,17 @@ const FACE_ENGINE_PYTHON = fileURLToPath(new URL("../../face-engine/.venv/Script
 const FAKE_VIDEO_PATH = fileURLToPath(new URL("../tmp_test/fake_camera.y4m", import.meta.url));
 
 const PASSWORD = "correcthorsebattery";
-const ADMIN = { name: "Test Admin", email: "admin@test.presentia" };
-const HR = { name: "Test HR", email: "hr@test.presentia" };
-const MANAGER = { name: "Test Manager", email: "manager@test.presentia" };
-const EMPLOYEE = { name: "Test Employee", email: "employee@test.presentia" };
-const KIOSK = { name: "Front Desk Kiosk", email: "kiosk@test.presentia" };
+const ADMIN = { name: "Test Admin", email: "admin@test.presencia" };
+const HR = { name: "Test HR", email: "hr@test.presencia" };
+const MANAGER = { name: "Test Manager", email: "manager@test.presencia" };
+const EMPLOYEE = { name: "Test Employee", email: "employee@test.presencia" };
+const KIOSK = { name: "Front Desk Kiosk", email: "kiosk@test.presencia" };
 
 const { report, summarize } = makeReporter();
 
 async function cleanupTestData() {
   const ids = (
-    await prisma.user.findMany({ where: { email: { endsWith: "@test.presentia" } }, select: { id: true } })
+    await prisma.user.findMany({ where: { email: { endsWith: "@test.presencia" } }, select: { id: true } })
   ).map((u) => u.id);
   if (ids.length > 0) {
     await prisma.punch.deleteMany({ where: { userId: { in: ids } } });

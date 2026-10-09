@@ -7,7 +7,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from . import pipeline
 from .schemas import Candidate, EnrollResponse, VerifyResponse
 
-app = FastAPI(title="Presentia face-engine")
+app = FastAPI(title="Presencia face-engine")
 
 DEFAULT_MATCH_THRESHOLD = 0.6
 DEFAULT_LIVENESS_THRESHOLD = 0.5

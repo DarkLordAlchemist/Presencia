@@ -41,7 +41,7 @@ export async function requireRole(...allowed: Role[]) {
   return user;
 }
 
-// A fresh Presentia deployment has no users yet — every route should bounce
+// A fresh Presencia deployment has no users yet — every route should bounce
 // to /setup instead of showing a login form for an account that can't exist.
 export const hasAnyUser = cache(async () => {
   const count = await prisma.user.count();

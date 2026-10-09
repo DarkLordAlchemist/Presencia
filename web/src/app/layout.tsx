@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Presentia",
+  title: "Presencia",
   description: "Facial recognition time-in/time-out for HR attendance.",
 };
 

@@ -16,11 +16,11 @@ const WEB_PORT = 3600;
 const BASE = `http://localhost:${WEB_PORT}`;
 
 const PASSWORD = "correcthorsebattery";
-const ADMIN = { name: "Payslip Test Admin", email: "payslip-admin@test.presentia" };
-const HR = { name: "Payslip Test HR", email: "payslip-hr@test.presentia" };
-const MANAGER = { name: "Payslip Test Manager", email: "payslip-manager@test.presentia" };
-const EMPLOYEE = { name: "Payslip Test Employee", email: "payslip-employee@test.presentia" };
-const OUTSIDER = { name: "Payslip Test Outsider", email: "payslip-outsider@test.presentia" };
+const ADMIN = { name: "Payslip Test Admin", email: "payslip-admin@test.presencia" };
+const HR = { name: "Payslip Test HR", email: "payslip-hr@test.presencia" };
+const MANAGER = { name: "Payslip Test Manager", email: "payslip-manager@test.presencia" };
+const EMPLOYEE = { name: "Payslip Test Employee", email: "payslip-employee@test.presencia" };
+const OUTSIDER = { name: "Payslip Test Outsider", email: "payslip-outsider@test.presencia" };
 
 const { report, summarize } = makeReporter();
 
@@ -39,7 +39,7 @@ function manilaInstant(dateStr: string, hhmm: string): Date {
 
 async function cleanupTestData() {
   const ids = (
-    await prisma.user.findMany({ where: { email: { endsWith: "@test.presentia" } }, select: { id: true } })
+    await prisma.user.findMany({ where: { email: { endsWith: "@test.presencia" } }, select: { id: true } })
   ).map((u) => u.id);
   if (ids.length > 0) {
     await prisma.payslip.deleteMany({ where: { userId: { in: ids } } });

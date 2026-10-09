@@ -8,6 +8,7 @@ import type { Role } from "@/generated/prisma/client";
 const NAV_LINKS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/dashboard", label: "Dashboard", roles: ["SUPER_ADMIN", "HR_ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/whos-in", label: "Who's In", roles: ["SUPER_ADMIN", "HR_ADMIN", "MANAGER"] },
+  { href: "/security", label: "Security", roles: ["SUPER_ADMIN", "SECURITY"] },
   { href: "/users", label: "Users", roles: ["SUPER_ADMIN"] },
   { href: "/config", label: "Biometric config", roles: ["SUPER_ADMIN"] },
   { href: "/enroll", label: "Enroll", roles: ["SUPER_ADMIN", "HR_ADMIN"] },

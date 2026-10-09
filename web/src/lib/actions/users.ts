@@ -11,7 +11,7 @@ export interface FormState {
   error?: string;
 }
 
-const VALID_ROLES: Role[] = ["SUPER_ADMIN", "HR_ADMIN", "MANAGER", "EMPLOYEE", "KIOSK"];
+const VALID_ROLES: Role[] = ["SUPER_ADMIN", "HR_ADMIN", "MANAGER", "EMPLOYEE", "KIOSK", "SECURITY"];
 
 function readRequiredField(formData: FormData, name: string): string | null {
   const value = formData.get(name);
