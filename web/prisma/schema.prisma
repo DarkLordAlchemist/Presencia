@@ -1,0 +1,397 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  SUPER_ADMIN
+  HR_ADMIN
+  MANAGER
+  EMPLOYEE
+  KIOSK
+}
+
+enum PunchType {
+  TIME_IN
+  BREAK_OUT
+  BREAK_IN
+  TIME_OUT
+}
+
+enum ShiftType {
+  FIXED
+  FLEXIBLE
+  ROTATING
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  EMERGENCY
+  OFFICIAL_BUSINESS
+  OTHER
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ShiftRequestType {
+  OVERTIME
+  SWAP
+}
+
+enum EmploymentStatus {
+  PROBATIONARY
+  REGULAR
+  CONTRACTUAL
+  PROJECT_BASED
+}
+
+enum CertificatePurpose {
+  GENERAL
+  GOVERNMENT_TRANSACTION
+  BANK_LOAN
+  VISA_TRAVEL
+}
+
+// The two Philippine holiday categories that carry different premium-pay
+// rates under the Labor Code — a "special working day" (paid at 100%, no
+// premium) is deliberately not a Holiday row at all here, since it changes
+// nothing about pay.
+enum HolidayType {
+  REGULAR
+  SPECIAL_NON_WORKING
+}
+
+enum PayComponentCategory {
+  EARNING
+  DEDUCTION
+}
+
+enum PayslipStatus {
+  DRAFT
+  ISSUED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  // Deactivation, not deletion — a resigned/terminated employee loses login
+  // and kiosk clock-in access, but every punch/correction/leave/audit record
+  // they're linked to stays intact for payroll and audit history.
+  active Boolean @default(true)
+
+  // Biometric enrollment (v1: only EMPLOYEE/MANAGER roles have this set).
+  // Stored encrypted (AES, server-side key from env) — never a raw vector at rest.
+  faceEmbeddingEnc String?
+  faceEnrolledAt   DateTime?
+
+  // HR onboarding record — filled in by HR/Admin, separate from account
+  // creation. Needed to auto-generate Certificate of Employment documents;
+  // an account can exist (and even clock in) before onboarding is complete,
+  // but certificate requests are blocked until it is.
+  jobTitle            String?
+  department          String?
+  jobDescription      String?
+  dateHired           DateTime?
+  employmentStatus    EmploymentStatus?
+  monthlyCompensation Float?
+  benefits            String? // free text, e.g. "HMO, 13th month pay, rice subsidy"
+  onboardedAt         DateTime?
+
+  managerId String?
+  manager   User?   @relation("ManagerToReports", fields: [managerId], references: [id])
+  reports   User[]  @relation("ManagerToReports")
+
+  schedules Schedule[]
+  punches   Punch[]
+
+  leaveRequests   LeaveRequest[]      @relation("LeaveRequester")
+  leaveReviews    LeaveRequest[]      @relation("LeaveReviewer")
+  shiftRequests   ShiftRequest[]      @relation("ShiftRequester")
+  shiftReviews    ShiftRequest[]      @relation("ShiftReviewer")
+  corrections     CorrectionRequest[] @relation("CorrectionRequester")
+  correctionReviews CorrectionRequest[] @relation("CorrectionReviewer")
+  auditLogs       AuditLog[]          @relation("AuditActor")
+  lockedPayPeriods PayPeriod[]        @relation("PayPeriodLocker")
+  certificateRequests CertificateRequest[] @relation("CertificateRequester")
+  certificateReviews  CertificateRequest[] @relation("CertificateReviewer")
+  payslips            Payslip[]            @relation("PayslipOwner")
+  issuedPayslips      Payslip[]            @relation("PayslipIssuer")
+}
+
+model Schedule {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  startTime  String // "09:00", 24h local time
+  endTime    String // "18:00", 24h local time
+  daysOfWeek String // comma-separated: "MON,TUE,WED,THU,FRI"
+  shiftType  ShiftType @default(FIXED)
+  validFrom  DateTime? // null = applies indefinitely from creation
+  validTo    DateTime? // null = open-ended (used for rotating/temporary blocks)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Punch {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  type           PunchType
+  timestamp      DateTime  @default(now())
+  confidence     Float // best-match cosine similarity returned by face-engine (1.0 for manual entries)
+  livenessPassed Boolean
+  createdAt      DateTime  @default(now())
+  manualEntry    Boolean   @default(false) // true if created via an approved CorrectionRequest, not a live scan
+
+  // Computed at punch time against that day's Schedule + SystemConfig —
+  // only the field(s) relevant to this punch's type are ever set.
+  lateMinutes      Int? // TIME_IN only: minutes late beyond the grace period (0 = on time)
+  undertimeMinutes Int? // TIME_OUT only: minutes short of the scheduled end time
+  overtimeMinutes  Int? // TIME_OUT only: minutes worked past scheduled end + grace
+  nightDiffMinutes Int? // TIME_OUT only: minutes of this shift falling in the night-differential window
+  breakMinutes     Int? // BREAK_IN only: duration of the break that just ended
+  overBreak        Boolean? // BREAK_IN only: true if breakMinutes exceeded the configured max
+
+  // Location & network context captured at punch time.
+  latitude       Float?
+  longitude      Float?
+  address        String?
+  withinGeofence Boolean? // null when geofencing is disabled
+  ipAddress      String?
+  ipAllowed      Boolean? // null when IP locking is disabled
+
+  correctionsFor CorrectionRequest[]
+}
+
+model LeaveRequest {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation("LeaveRequester", fields: [userId], references: [id])
+  type      LeaveType
+  startDate DateTime
+  endDate   DateTime
+  reason    String
+  status    RequestStatus @default(PENDING)
+
+  reviewedById String?
+  reviewedBy   User?     @relation("LeaveReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+model ShiftRequest {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation("ShiftRequester", fields: [userId], references: [id])
+  type       ShiftRequestType
+  targetDate DateTime
+  details    String // reason for OT, or proposed swap details
+  status     RequestStatus    @default(PENDING)
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ShiftReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// "Forgot to clock out"-style disputes: request a missing punch be added,
+// or an existing one corrected. Never edits a Punch directly — always
+// goes through review, and every approval is written to AuditLog.
+model CorrectionRequest {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation("CorrectionRequester", fields: [userId], references: [id])
+  punchId       String? // the punch being corrected, or null if adding a missing one
+  punch         Punch?     @relation(fields: [punchId], references: [id])
+  requestedType PunchType? // required when punchId is null (adding a missing punch)
+  requestedTime DateTime
+  reason        String
+  status        RequestStatus @default(PENDING)
+
+  reviewedById String?
+  reviewedBy   User?     @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// A request for an auto-generated Certificate of Employment. An employee
+// requests one for themselves; HR/Admin can also file one on behalf of any
+// employee (needed for a resigned employee, who can no longer log in once
+// deactivated). Approval snapshots the employee's HR record at that exact
+// moment — a COE is a point-in-time document and must not silently change
+// if the employee's onboarding record is edited afterward.
+model CertificateRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation("CertificateRequester", fields: [userId], references: [id])
+
+  purpose CertificatePurpose
+  notes   String? // optional detail from the requester, e.g. which bank/embassy
+
+  status       RequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedBy   User?         @relation("CertificateReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+
+  snapshotJobTitle         String?
+  snapshotDepartment       String?
+  snapshotDateHired        DateTime?
+  snapshotEmploymentStatus EmploymentStatus?
+  snapshotCompensation     Float?
+  snapshotBenefits         String?
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String
+  reason     String?
+  beforeJson String?
+  afterJson  String?
+  createdAt  DateTime @default(now())
+}
+
+// A payroll cutoff window. Locking one blocks any further punch
+// correction from landing inside its date range.
+model PayPeriod {
+  id       String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  locked    Boolean  @default(false)
+  lockedAt  DateTime?
+
+  lockedById String?
+  lockedBy   User?   @relation("PayPeriodLocker", fields: [lockedById], references: [id])
+
+  payslips Payslip[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([startDate, endDate])
+}
+
+// A specific calendar date's Philippine holiday designation — maintained by
+// HR/Admin, since these are proclaimed yearly (some fixed, some movable) and
+// the app has no reliable way to know them on its own. Drives the rest-day/
+// holiday premium-pay rates on generated payslips.
+model Holiday {
+  id   String      @id @default(cuid())
+  date DateTime    @unique
+  name String
+  type HolidayType
+
+  createdAt DateTime @default(now())
+}
+
+// One per employee per existing PayPeriod. DRAFT while HR is preparing it
+// (freely editable, invisible to the employee/manager); ISSUED locks it —
+// same point-in-time principle as a Certificate of Employment, so a payslip
+// never silently changes after the fact. Line items are auto-suggested from
+// real attendance + the Philippine Labor Code premium-pay rules, but HR can
+// edit/add/remove anything before issuing.
+model Payslip {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation("PayslipOwner", fields: [userId], references: [id])
+  payPeriodId String
+  payPeriod   PayPeriod     @relation(fields: [payPeriodId], references: [id])
+  status      PayslipStatus @default(DRAFT)
+
+  // Snapshotted at generation time so a later change to the employee's
+  // monthlyCompensation (or the config divisor) doesn't retroactively alter
+  // an already-issued payslip's stated rate.
+  monthlyCompensationSnapshot Float
+  workingDaysPerMonthSnapshot Float
+  dailyRateSnapshot           Float
+  hourlyRateSnapshot          Float
+
+  issuedById String?
+  issuedBy   User?     @relation("PayslipIssuer", fields: [issuedById], references: [id])
+  issuedAt   DateTime?
+
+  lineItems PayslipLineItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, payPeriodId])
+}
+
+model PayslipLineItem {
+  id        String               @id @default(cuid())
+  payslipId String
+  payslip   Payslip              @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  category  PayComponentCategory
+  label     String
+  amount    Float
+  sortOrder Int                  @default(0)
+
+  createdAt DateTime @default(now())
+}
+
+// Singleton row: system-wide biometric + attendance-policy config, set by SUPER_ADMIN.
+model SystemConfig {
+  id                  String @id @default(cuid())
+  matchThreshold      Float  @default(0.6)
+  livenessSensitivity Float  @default(0.5)
+
+  gracePeriodMinutes    Int    @default(5) // acceptable lateness/early-OT-start before flagging
+  maxBreakMinutes       Int    @default(60) // a SINGLE break longer than this is flagged overBreak
+  maxDailyBreakMinutes  Int    @default(90) // sum of ALL breaks in a day above this is flagged, however they're split (one lunch, lunch + a break, lunch + two half-breaks, ...)
+  nightDiffStart        String @default("22:00") // 24h local time
+  nightDiffEnd          String @default("06:00") // 24h local time, next day
+
+  geofenceEnabled      Boolean @default(false)
+  geofenceLat          Float?
+  geofenceLng          Float?
+  geofenceRadiusMeters Int     @default(100)
+
+  ipLockEnabled     Boolean @default(false)
+  allowedIpPrefixes String? // comma-separated exact IPs or address prefixes
+
+  payrollWebhookUrl String?
+
+  // Divisor used to turn a monthly salary into a daily rate (dailyRate =
+  // monthlyCompensation / workingDaysPerMonth), then an hourly rate
+  // (dailyRate / 8). Deliberately configurable — companies differ on this
+  // (22 for a 5-day week, 26 for 6-day, 261/12 ≈ 21.75, etc.) and getting it
+  // wrong means wrong pay, so it's never hardcoded.
+  workingDaysPerMonth Float @default(22)
+
+  companyName String? // used as the issuing-company line on generated Certificate of Employment documents
+
+  // The name/title printed as signatory on every generated Certificate of
+  // Employment — deliberately NOT whoever happened to click Approve (that
+  // could be any SUPER_ADMIN/HR_ADMIN account). A COE is a legal HR
+  // document; the printed signatory should be a specific designated person
+  // (typically the actual Head of HR), independent of who processed it.
+  certificateSignatoryName  String?
+  certificateSignatoryTitle String? @default("Head of Human Resources")
+
+  updatedAt DateTime @updatedAt
+}

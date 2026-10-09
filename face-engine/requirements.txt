@@ -1,0 +1,19 @@
+# Pinned exact — this exact combination is verified working together.
+# Newer opencv-contrib-python (5.x) silently breaks DeepFace's YuNet detector
+# wrapper (returns zero detections even on an obvious, well-lit face —
+# confirmed with OpenCV's own FaceDetectorYN called directly, which worked
+# fine on the same image at the same version, isolating the bug to
+# DeepFace's wrapper, not OpenCV itself). Do not bump opencv past 4.10.0.84
+# without re-verifying detection actually still works, not just that
+# imports succeed. MTCNN is used as the detector backend instead of YuNet
+# for this reason.
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+deepface==0.0.101
+tf-keras==2.21.0
+tensorflow==2.21.0
+opencv-python==4.10.0.84
+opencv-contrib-python==4.10.0.84
+numpy==2.4.6
+mtcnn==1.0.0

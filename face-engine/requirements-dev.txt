@@ -1,0 +1,2 @@
+# Only needed to run scripts/test_pipeline.py (FastAPI's TestClient).
+httpx==0.28.1
