@@ -47,6 +47,36 @@ on a TensorFlow/Keras backend. Combined footprint is well under 100MB;
 confirmed round-trip latency (detect + liveness + recognize) is under a
 second on CPU alone, no GPU required.
 
+### Performance Benchmarks — No GPU Required, GPU-Ready If You Have One
+
+The shipped pipeline above runs the full detect → liveness → recognize
+round trip in **~0.6 seconds on CPU alone** — no GPU needed for normal
+kiosk use.
+
+We also benchmarked faster detector alternatives for a future release,
+on the same test image, same machine:
+
+| Detector | Speed | Notes |
+|---|---|---|
+| **MTCNN** (shipped) | 216.6ms | Current production detector |
+| YOLOv8n (COCO, general-purpose) | 29.0ms (CPU) / 9.1ms (GPU) | **Not a face detector** — tested honestly and ruled out; detects generic "person" boxes, not faces, so it isn't a drop-in replacement |
+| **YuNet** (OpenCV, face-trained) | 13.2ms | Genuine face detector, ~16x faster than MTCNN, validated as a real upgrade candidate |
+| SCRFD (InsightFace, face-trained) | 8.5ms (median) | Also genuine and face-trained; close second to YuNet |
+
+Swapping MTCNN for YuNet in the full pipeline (detect + liveness +
+recognize together, not detection alone) measured **~132–152ms warm**,
+about **4x faster** than the current ~600ms round trip — validated
+end-to-end in testing, not yet shipped in this release.
+
+**On GPU acceleration:** Presencia's models are small enough that CPU is
+genuinely sufficient for a single kiosk. We confirmed the architecture
+scales cleanly to GPU anyway — on an NVIDIA RTX 5070 (laptop GPU),
+detector inference dropped from 29ms (CPU) to ~9ms (GPU), roughly a
+**3–4x further speedup** on top of an already-fast model. That headroom
+matters most if you're running many cameras against one shared
+recognition service (e.g. the Security dashboard's multi-camera
+monitoring) rather than a single clock-in terminal.
+
 ### Technologies & Frameworks
 
 - **Web app:** Next.js 16 (App Router) + TypeScript, Prisma ORM over
