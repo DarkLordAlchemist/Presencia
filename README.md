@@ -4,10 +4,64 @@
 
 **Frictionless Security at Face Value.**
 
-Started as facial recognition time-in/time-out for HR attendance — now a
-full facial-recognition security platform: HR attendance *and*
-multi-camera security monitoring that tracks who's moving where across
-multiple physical locations, live.
+## About This Project
+
+**Project Name:** Presencia — AppBuildersPH Hackathon 2026
+
+Presencia is a facial-recognition HR attendance system that grew into a
+full security platform: contactless, liveness-verified clock-in for
+employees, plus multi-camera monitoring that tracks who's moving through
+a building in real time — all wrapped around a complete HR suite
+(scheduling, leave, payroll, certificates).
+
+**Team Members**
+- Jay Ortiz
+- Nona Sibayan
+- EVIE (AI development collaborator)
+
+### Runs 100% Locally — No Cloud LLM Required
+
+Every AI capability in Presencia — face detection, recognition, and
+liveness/anti-spoofing — runs as local inference on the machine hosting
+it. No frame, embedding, or recognition result is ever sent to an
+external API, and the application has no dependency on any cloud-hosted
+LLM or AI service to function. It runs entirely on local hardware, even
+fully offline.
+
+*One honest exception:* if GPS geofencing is turned on, punches
+optionally reverse-geocode coordinates into a street address via
+OpenStreetMap's public Nominatim API — a plain mapping lookup, not an AI
+service, and the feature works without it (geofence enforcement itself
+needs no internet access).
+
+### Models Used
+
+| Task | Model | Notes |
+|---|---|---|
+| Face detection | MTCNN | Bundled weights, no external download at runtime |
+| Face recognition | SFace | 128-dim embeddings, ~37MB ONNX model |
+| Liveness / anti-spoofing | MiniFASNet (V2 + V1SE) | Blocks photo/video/mask spoofing |
+
+All three run locally via [DeepFace](https://github.com/serengil/deepface)
+on a TensorFlow/Keras backend. Combined footprint is well under 100MB;
+confirmed round-trip latency (detect + liveness + recognize) is under a
+second on CPU alone, no GPU required.
+
+### Technologies & Frameworks
+
+- **Web app:** Next.js 16 (App Router) + TypeScript, Prisma ORM over
+  SQLite, Tailwind CSS, `bcryptjs` + `jose` (JWT sessions)
+- **Face engine:** Python + FastAPI + Uvicorn, DeepFace, TensorFlow,
+  OpenCV
+- **Data security:** Face embeddings encrypted at rest (AES-256-GCM)
+
+### AI Development Tools
+
+This project was built with AI-assisted development throughout — code,
+architecture, and debugging work were done in collaboration with
+**Claude Code** (Anthropic), referred to on this team as **EVIE**. All
+AI-assisted code was reviewed and tested by the team before being
+committed.
 
 ## Screenshots
 
