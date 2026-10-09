@@ -1,3 +1,5 @@
+![Presencia](docs/images/logo.jpg)
+
 # Presencia
 
 **Frictionless Security at Face Value.**
