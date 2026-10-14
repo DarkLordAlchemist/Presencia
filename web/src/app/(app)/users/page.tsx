@@ -10,7 +10,7 @@ export default async function UsersPage() {
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
-    include: { manager: { select: { name: true } } },
+    include: { manager: { select: { name: true } }, _count: { select: { faceEmbeddings: true } } },
   });
 
   return (
@@ -49,7 +49,9 @@ export default async function UsersPage() {
                 {u.manager?.name ?? "—"}
               </td>
               <td className="py-2 pr-4 text-zinc-700 dark:text-zinc-300">
-                {u.faceEnrolledAt ? "Yes" : "No"}
+                {u._count.faceEmbeddings > 0
+                  ? `Yes (${u._count.faceEmbeddings} angle${u._count.faceEmbeddings === 1 ? "" : "s"})`
+                  : "No"}
               </td>
               <td className="py-2 pr-4">
                 <span

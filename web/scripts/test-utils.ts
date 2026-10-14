@@ -94,3 +94,18 @@ export function ensureTestDatabaseMigrated(databaseUrl: string) {
     throw err;
   }
 }
+
+/** Drives /enroll's guided multi-angle capture for whichever person is
+ * already selected: captures every angle in order (each one is checked by
+ * the real face-engine as it's taken), then saves them all. The fake
+ * camera plays one still photo, so every angle is the same face — enough
+ * to exercise the flow and the per-angle storage, not pose variety. */
+export async function enrollAllAngles(page: import("playwright").Page, angleCount = 5) {
+  for (let i = 1; i <= angleCount; i++) {
+    await page.waitForSelector(`text=Angle ${i} of ${angleCount}`, { timeout: 20000 });
+    await page.click('button:has-text("Capture this angle")');
+  }
+  await page.waitForSelector(`text=${angleCount} angles captured`, { timeout: 20000 });
+  await page.click(`button:has-text("Save ${angleCount} angles")`);
+  await page.waitForSelector(`text=Enrolled ${angleCount} angles`, { timeout: 60000 });
+}

@@ -5,8 +5,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/dal";
 import { getEncodedKey } from "@/lib/auth/session";
-import { verifyFace, type VerifyCandidate } from "@/lib/face/engine-client";
-import { decryptEmbedding } from "@/lib/face/encryption";
+import { verifyFace } from "@/lib/face/engine-client";
+import { loadFaceCandidates } from "@/lib/face/candidates";
 import { computeFlagsForPunch } from "@/lib/attendance/flags";
 import { haversineDistanceMeters, isIpAllowed } from "@/lib/attendance/geo";
 import { manilaDayBounds } from "@/lib/attendance/compute";
@@ -162,23 +162,15 @@ export async function identifyFace(formData: FormData): Promise<IdentifyResult> 
   const latitude = typeof latRaw === "string" && latRaw.length > 0 ? Number(latRaw) : null;
   const longitude = typeof lngRaw === "string" && lngRaw.length > 0 ? Number(lngRaw) : null;
 
-  const [config, enrolledUsers, headerList] = await Promise.all([
+  const [config, { users: enrolledUsers, candidates }, headerList] = await Promise.all([
     prisma.systemConfig.findFirst(),
-    prisma.user.findMany({
-      where: { faceEmbeddingEnc: { not: null }, active: true },
-      select: { id: true, name: true, faceEmbeddingEnc: true },
-    }),
+    loadFaceCandidates(),
     headers(),
   ]);
   if (!config) return { error: "System is not configured yet." };
 
   const locationCheck = await checkLocationAndNetwork(latitude, longitude, headerList, config);
   if (locationCheck.error) return { error: locationCheck.error };
-
-  const candidates: VerifyCandidate[] = enrolledUsers.map((u) => ({
-    user_id: u.id,
-    embedding: decryptEmbedding(u.faceEmbeddingEnc!),
-  }));
 
   const result = await verifyFace(image, candidates, config.matchThreshold, config.livenessSensitivity);
   if (!result.ok) return { error: result.error };

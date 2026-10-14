@@ -11,7 +11,7 @@ import { chromium } from "playwright";
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { prisma } from "../src/lib/prisma";
-import { killPort, waitForServer, startDevServer, makeReporter, ensureTestDatabaseMigrated } from "./test-utils";
+import { killPort, waitForServer, startDevServer, makeReporter, ensureTestDatabaseMigrated, enrollAllAngles } from "./test-utils";
 
 const WEB_PORT = 3100;
 const ENGINE_PORT = 8100;
@@ -161,11 +161,16 @@ async function main() {
     await page.selectOption("#userId", employeeOptionValue);
     await page.waitForSelector("video", { timeout: 10000 });
     await page.waitForTimeout(1000); // let the fake video stream actually start producing frames
-    await page.click('button:has-text("Capture photo")');
-    await page.waitForSelector("img[alt='Captured']", { timeout: 10000 });
-    await page.click('button:has-text("Enroll this photo")');
-    await page.waitForSelector("text=Enrolled successfully.", { timeout: 20000 });
+    await enrollAllAngles(page);
     report("HR enrolls the employee's face successfully", true);
+    const storedAngles = await prisma.faceEmbedding.findMany({
+      where: { user: { email: EMPLOYEE.email } },
+      select: { pose: true },
+    });
+    report(
+      "all 5 enrollment angles are stored as separate reference embeddings",
+      storedAngles.length === 5 && new Set(storedAngles.map((a) => a.pose)).size === 5,
+    );
 
     // 4. Manager assigns a schedule, scoped to only their own report.
     await logout(page);

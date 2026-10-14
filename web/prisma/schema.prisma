@@ -97,10 +97,10 @@ model User {
   // they're linked to stays intact for payroll and audit history.
   active Boolean @default(true)
 
-  // Biometric enrollment (v1: only EMPLOYEE/MANAGER roles have this set).
-  // Stored encrypted (AES, server-side key from env) — never a raw vector at rest.
-  faceEmbeddingEnc String?
-  faceEnrolledAt   DateTime?
+  // Biometric enrollment: one or more reference embeddings per person (see
+  // FaceEmbedding). faceEnrolledAt is set the first time any are saved.
+  faceEnrolledAt DateTime?
+  faceEmbeddings FaceEmbedding[]
 
   // HR onboarding record — filled in by HR/Admin, separate from account
   // creation. Needed to auto-generate Certificate of Employment documents;
@@ -135,6 +135,7 @@ model User {
   payslips            Payslip[]            @relation("PayslipOwner")
   issuedPayslips      Payslip[]            @relation("PayslipIssuer")
   movementLogs        MovementLog[]        @relation("MovementLogSubject")
+  sceneAlerts         SceneAlert[]         @relation("SceneAlertSubject")
 }
 
 model Schedule {
@@ -367,7 +368,38 @@ model MovementLog {
   user       User     @relation("MovementLogSubject", fields: [userId], references: [id])
   location   String // free-text label the security operator assigned to that camera tile
   confidence Float
+  activity   String? // what scene-engine saw this person doing in the same frame, e.g. "carrying box"
   createdAt  DateTime @default(now())
+}
+
+// One reference face per row. Several per person (different angles —
+// front, slight left/right, chin up/down) so a live scan at an off angle
+// still has a close reference to match; face-engine's /verify already
+// takes the best score across every candidate it's sent, so each row is
+// just another candidate tagged with its owner's user_id.
+model FaceEmbedding {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embeddingEnc String // AES-256-GCM, server-side key from env — never a raw vector at rest
+  pose         String // "front", "left", "right", "up", "down", or "legacy" for a pre-multi-angle enrollment
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+// A scene-engine (RelateAnything) relation on a Security camera that
+// matched the admin's alert watchlist, e.g. "person holding knife".
+// userId is set only when the face in the same frame was also recognized.
+model SceneAlert {
+  id        String   @id @default(cuid())
+  location  String
+  relation  String // "person holding knife"
+  matched   String // the watchlist entry it matched, e.g. "holding knife"
+  score     Float
+  userId    String?
+  user      User?    @relation("SceneAlertSubject", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 // Singleton row: system-wide biometric + attendance-policy config, set by SUPER_ADMIN.
@@ -408,6 +440,14 @@ model SystemConfig {
   // (typically the actual Head of HR), independent of who processed it.
   certificateSignatoryName  String?
   certificateSignatoryTitle String? @default("Head of Human Resources")
+
+  // Security scene analysis (scene-engine / RelateAnything). Comma-separated
+  // phrases, matched against a relation's predicate alone ("climbing") or
+  // "<predicate> <object>" ("holding knife"). Objects are limited to what
+  // the detector knows (COCO's 80 classes — knife, scissors, baseball bat
+  // yes; gun, fence, crowbar no).
+  sceneAlertWatchlist String @default("holding knife, holding scissors, holding baseball bat, climbing, jumping over, lying on, hitting, kicking, fighting with")
+  sceneAlertMinScore  Float  @default(0.4)
 
   updatedAt DateTime @updatedAt
 }

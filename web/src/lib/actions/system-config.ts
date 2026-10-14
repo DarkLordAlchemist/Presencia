@@ -62,6 +62,17 @@ export async function updateSystemConfig(_prevState: FormState, formData: FormDa
 
   const workingDaysPerMonth = Number(formData.get("workingDaysPerMonth"));
 
+  const sceneAlertWatchlistRaw = formData.get("sceneAlertWatchlist");
+  const sceneAlertWatchlist =
+    typeof sceneAlertWatchlistRaw === "string"
+      ? sceneAlertWatchlistRaw
+          .split(/[,\n]/)
+          .map((w) => w.trim().toLowerCase())
+          .filter(Boolean)
+          .join(", ")
+      : "";
+  const sceneAlertMinScore = Number(formData.get("sceneAlertMinScore"));
+
   if (Number.isNaN(matchThreshold) || matchThreshold < 0 || matchThreshold > 1) {
     return { error: "Match threshold must be between 0 and 1." };
   }
@@ -95,6 +106,9 @@ export async function updateSystemConfig(_prevState: FormState, formData: FormDa
   if (!Number.isFinite(workingDaysPerMonth) || workingDaysPerMonth <= 0) {
     return { error: "Working days per month must be a positive number." };
   }
+  if (Number.isNaN(sceneAlertMinScore) || sceneAlertMinScore < 0 || sceneAlertMinScore > 1) {
+    return { error: "Scene alert minimum score must be between 0 and 1." };
+  }
 
   const existing = await prisma.systemConfig.findFirst();
   if (!existing) {
@@ -122,6 +136,8 @@ export async function updateSystemConfig(_prevState: FormState, formData: FormDa
       certificateSignatoryName: certificateSignatoryName || null,
       certificateSignatoryTitle: certificateSignatoryTitle,
       workingDaysPerMonth,
+      sceneAlertWatchlist,
+      sceneAlertMinScore,
     },
   });
 

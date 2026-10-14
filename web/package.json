@@ -19,7 +19,8 @@
     "test:certificates": "tsx scripts/test-certificates-flow.ts",
     "test:payroll-rates": "tsx scripts/test-payroll-rates.ts",
     "test:payslip-compute": "tsx scripts/test-payslip-compute.ts",
-    "test:payslips": "tsx scripts/test-payslips-flow.ts"
+    "test:payslips": "tsx scripts/test-payslips-flow.ts",
+    "test:security": "tsx scripts/test-security-scene-flow.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "7.10.0",

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useCamera } from "@/components/use-camera";
+import { FaceGuideOverlay } from "@/components/face-guide-overlay";
 import { identifyFace, confirmPunch } from "@/lib/actions/punches";
 import { TYPE_LABELS } from "@/lib/attendance/punch-types";
 import { exitKiosk, type FormState } from "@/lib/actions/auth";
@@ -181,6 +182,15 @@ export function KioskView() {
 
       <div className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-lg bg-zinc-900">
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+        {/* Positioning guide while scanning; hidden while the person picks a
+            punch type so it doesn't compete with those buttons. Briefly green
+            after a successful punch. */}
+        {ready && stage.kind !== "confirming" && (
+          <FaceGuideOverlay
+            tone={banner?.kind === "success" ? "success" : "neutral"}
+            pulse={stage.kind === "scanning" && !banner}
+          />
+        )}
         {!ready && !cameraError && (
           <div className="absolute inset-0 flex items-center justify-center text-zinc-400">
             Starting camera…

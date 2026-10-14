@@ -1,0 +1,7 @@
+# scene-engine runs inside RelateAnything's own virtualenv (see README.md),
+# which already provides torch (CUDA build), ultralytics and relsgg.
+# These are only the web-serving extras on top, pinned to the same
+# versions face-engine uses.
+fastapi==0.141.1
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32

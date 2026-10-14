@@ -21,8 +21,8 @@ a building in real time — all wrapped around a complete HR suite
 
 ### Runs 100% Locally — No Cloud LLM Required
 
-Every AI capability in Presencia — face detection, recognition, and
-liveness/anti-spoofing — runs as local inference on the machine hosting
+Every AI capability in Presencia — face detection, recognition,
+liveness/anti-spoofing, and Security scene analysis — runs as local inference on the machine hosting
 it. No frame, embedding, or recognition result is ever sent to an
 external API, and the application has no dependency on any cloud-hosted
 LLM or AI service to function. It runs entirely on local hardware, even
@@ -41,6 +41,8 @@ needs no internet access).
 | Face detection | MTCNN | Bundled weights, no external download at runtime |
 | Face recognition | SFace | 128-dim embeddings, ~37MB ONNX model |
 | Liveness / anti-spoofing | MiniFASNet (V2 + V1SE) | Blocks photo/video/mask spoofing |
+| Scene objects (Security) | YOLO26m | COCO's 80 classes — people, knives, scissors, bats, bags, furniture |
+| Scene relations (Security) | [RelateAnything](https://github.com/Maelic/RelateAnything) ViT-S+ | Open-vocabulary "who is doing what to what" — `person holding knife` |
 
 All three run locally via [DeepFace](https://github.com/serengil/deepface)
 on a TensorFlow/Keras backend. Combined footprint is well under 100MB;
@@ -102,12 +104,17 @@ committed.
 | ![Security — multi-camera monitoring](docs/images/security-dashboard.jpg) | ![Facial enrollment](docs/images/enroll.jpg) |
 | Security — live multi-camera movement log | Facial enrollment |
 
-Two services:
+Three services:
 
 - **`web/`** — Next.js (App Router) + TypeScript + Prisma/SQLite. Handles
   users, roles, schedules, attendance logs, and the kiosk clock-in UI.
 - **`face-engine/`** — Python/FastAPI service isolating the ML pipeline:
   face detection, recognition (embeddings), and liveness/anti-spoofing.
+- **`scene-engine/`** — Python/FastAPI service for the Security
+  dashboard's scene analysis (YOLO26m + RelateAnything, PyTorch/CUDA).
+  Optional: without it, Security runs on face recognition alone. Kept
+  separate from face-engine on purpose — different ML stacks (PyTorch vs.
+  a pinned TensorFlow), so neither can break the other.
 
 ## Roles
 
@@ -123,7 +130,8 @@ Two services:
   entrance; no nav, no logout button, camera-only clock-in loop.
 - **Security** — runs the multi-camera monitoring dashboard: watches one
   or more physical cameras at once and logs recognized, live faces by
-  location automatically, no interaction required.
+  location automatically, no interaction required, plus scene alerts for
+  watchlisted activity.
 
 ## Features
 
@@ -131,6 +139,13 @@ Two services:
   (SFace embeddings) + liveness/anti-spoofing (MiniFASNet), with a
   verify-then-choose kiosk flow (identify a face, show status, let the
   employee pick Time In/Break Out/Break In/Time Out themselves).
+- **Multi-angle face enrollment** — HR captures up to five reference
+  angles per person (straight ahead, slight left/right, chin up/down),
+  each checked by face-engine as it's taken. Every angle is stored as its
+  own encrypted embedding, and every kiosk/Security scan is matched
+  against all of them, so someone not squarely facing the camera still
+  matches. "Add more angles" appends without re-enrolling (new glasses, a
+  camera mounted higher).
 - **Multi-camera security monitoring** (`/security`) — the newest
   capability, and the one that turns this from a single-kiosk time clock
   into a real facial-recognition security platform. Add any number of
@@ -146,6 +161,16 @@ Two services:
   physical door/lock hardware integration yet (that's the planned phase 2
   step) — today it's full visibility into who's where, the access-control
   trigger comes next.
+- **Security scene analysis** (RelateAnything) — every Security camera
+  frame also goes to scene-engine, which detects people and objects and
+  describes how they relate ("person carrying box", "person holding
+  knife"). Each tile shows a live one-line description of its scene; a
+  recognized person's movement-log entry records what they were doing;
+  and anything matching the admin-editable **alert watchlist** (`/config`
+  — e.g. `holding knife, climbing, kicking`) is logged as a red **scene
+  alert** with camera, time, score, and the person if their face was also
+  recognized — or "Unidentified" if not. If scene-engine is down, tiles
+  say so and face logging carries on.
 - **Attendance rules** — grace periods, overtime, midnight-crossing-aware
   night differential, single-break and daily-total break budgets.
 - **Location/network controls** — GPS geofencing and IP/prefix locking,
@@ -202,7 +227,30 @@ returns zero detections even on an obvious face). This project avoids that
 by using the MTCNN detector backend instead. See the comment at the top
 of `requirements.txt`.
 
-### 2. web (Next.js)
+### 2. scene-engine (optional — Security scene analysis)
+
+Runs inside an existing [RelateAnything](https://github.com/Maelic/RelateAnything)
+install (its own virtualenv provides PyTorch with CUDA, `ultralytics`, and
+`relsgg`). Install RelateAnything per its README (on Windows: CUDA torch
+from the cu130 index first, then `pip install -e ".[hub,detector]"`), then:
+
+```bash
+cd scene-engine
+<RelateAnything>\.venv\Scripts\python.exe -m pip install -r requirements.txt
+<RelateAnything>\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+First run downloads YOLO26m (~42MB) and the RelateAnything ViT-S+
+weights from Hugging Face. Uses ~450MB of VRAM on a GPU; falls back to
+CPU if there is none (slower). Set `SCENE_ENGINE_URL` in `web/.env` if it
+isn't on port 8001.
+
+**License note:** RelateAnything is AGPL-3.0. Presencia calls it,
+unmodified, as a separate network service. Review the AGPL's terms before
+distributing or offering Presencia commercially with scene analysis
+enabled.
+
+### 3. web (Next.js)
 
 ```bash
 cd web
@@ -223,8 +271,9 @@ fullscreen. It has no navigation and no logout button by design.
 
 ### Requirements
 
-- Node.js 20+, Python 3.11+ (both services must be running simultaneously
-  — the web app calls the face-engine over HTTP for every enroll/verify).
+- Node.js 20+, Python 3.11+ (web and face-engine must be running
+  simultaneously — the web app calls the face-engine over HTTP for every
+  enroll/verify; scene-engine is optional).
 - No database server — SQLite is a single file (`dev.db`).
 - A camera-equipped browser for enrollment and kiosk clock-in (uses
   `getUserMedia`).
@@ -238,6 +287,22 @@ fullscreen. It has no navigation and no logout button by design.
 cd face-engine
 bash scripts/fetch_test_images.sh
 python scripts/test_pipeline.py
+```
+
+## Verifying scene-engine and the Security dashboard
+
+`scene-engine/scripts/test_scene_engine.py` runs real YOLO26m +
+RelateAnything inference on RelateAnything's own sample photos (15
+checks), and `npm run test:security` (in `web/`) drives the Security
+dashboard end to end with both engines real and two fake cameras —
+movement logging, a scene alert, dedupe, and scene-engine going offline
+mid-run (11 checks):
+
+```bash
+cd scene-engine
+<RelateAnything>\.venv\Scripts\python.exe scripts/test_scene_engine.py
+cd ../web
+npm run test:security
 ```
 
 ## Stack notes

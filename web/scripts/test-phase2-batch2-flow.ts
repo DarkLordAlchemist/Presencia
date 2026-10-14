@@ -13,7 +13,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import { prisma } from "../src/lib/prisma";
-import { killPort, waitForServer, startDevServer, makeReporter, ensureTestDatabaseMigrated } from "./test-utils";
+import { killPort, waitForServer, startDevServer, makeReporter, ensureTestDatabaseMigrated, enrollAllAngles } from "./test-utils";
 
 const WEB_PORT = 3101;
 const ENGINE_PORT = 8101;
@@ -188,10 +188,7 @@ async function main() {
     await page.selectOption("#userId", employeeOptionValue);
     await page.waitForSelector("video", { timeout: 10000 });
     await page.waitForTimeout(1000);
-    await page.click('button:has-text("Capture photo")');
-    await page.waitForSelector("img[alt='Captured']", { timeout: 10000 });
-    await page.click('button:has-text("Enroll this photo")');
-    await page.waitForSelector("text=Enrolled successfully.", { timeout: 20000 });
+    await enrollAllAngles(page);
     report("HR enrolls the employee's face", true);
 
     // --- Advanced rostering: group assignment (both Manager's report AND

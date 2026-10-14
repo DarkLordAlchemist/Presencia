@@ -15,6 +15,7 @@ export function ConfigForm({ config }: { config: SystemConfig }) {
   const [livenessSensitivity, setLivenessSensitivity] = useState(config.livenessSensitivity);
   const [geofenceEnabled, setGeofenceEnabled] = useState(config.geofenceEnabled);
   const [ipLockEnabled, setIpLockEnabled] = useState(config.ipLockEnabled);
+  const [sceneAlertMinScore, setSceneAlertMinScore] = useState(config.sceneAlertMinScore);
 
   return (
     <form action={formAction} className="mt-6 flex max-w-lg flex-col gap-6">
@@ -300,6 +301,47 @@ export function ConfigForm({ config }: { config: SystemConfig }) {
           This name/title is what prints on every Certificate of Employment — deliberately not
           whoever happened to click Approve, since that could be any System Admin or HR Admin
           account. Set this to your actual Head of HR (or whoever is the designated signatory).
+        </p>
+      </div>
+
+      <hr className="border-zinc-200 dark:border-zinc-800" />
+
+      <div>
+        <label htmlFor="sceneAlertWatchlist" className={labelClass}>
+          Security scene alert watchlist
+        </label>
+        <textarea
+          id="sceneAlertWatchlist"
+          name="sceneAlertWatchlist"
+          rows={3}
+          defaultValue={config.sceneAlertWatchlist}
+          className={inputClass}
+        />
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Comma-separated. Each phrase is an action (&quot;climbing&quot;) or an action plus an
+          object (&quot;holding knife&quot;). When a Security camera sees a person doing one of
+          these, it&apos;s logged as a scene alert. Objects are limited to what the detector
+          recognizes — knife, scissors, baseball bat and bottle work; gun and fence don&apos;t.
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="sceneAlertMinScore" className={labelClass}>
+          Scene alert minimum score: {sceneAlertMinScore.toFixed(2)}
+        </label>
+        <input
+          id="sceneAlertMinScore"
+          name="sceneAlertMinScore"
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={sceneAlertMinScore}
+          onChange={(e) => setSceneAlertMinScore(Number(e.target.value))}
+          className="mt-2 w-full"
+        />
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Lower catches more but raises more false alarms.
         </p>
       </div>
 
